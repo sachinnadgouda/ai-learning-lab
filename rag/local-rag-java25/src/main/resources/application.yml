@@ -1,0 +1,29 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: local-rag
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+logging:
+  structured:
+    format:
+      console: ecs
+  level:
+    root: INFO
+    dev.example.rag: INFO
+rag:
+  ollama-url: ${OLLAMA_URL:http://localhost:11434}
+  qdrant-url: ${QDRANT_URL:http://localhost:6333}
+  collection: thai-recipe-index
+  chat-model: llama3.2:1b
+  embedding-model: nomic-embed-text
+  top-k: 5
+  min-relevance-score: 0.5
+  min-question-coverage: 0.5
+  chunk-size: 1100
+  chunk-overlap: 150
+  max-pdf-bytes: 10000000

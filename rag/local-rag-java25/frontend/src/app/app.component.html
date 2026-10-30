@@ -1,0 +1,29 @@
+<div class="shell">
+  <header class="topbar"><div class="brand"><span class="brand-icon">◈</span><span>Local RAG <span class="muted">Studio</span></span></div><span class="pill"><span class="dot"></span> Local-first AI</span></header>
+  <main>
+    <section class="hero"><p class="eyebrow">JAVA 25 · SPRING BOOT 4 · ANGULAR · OLLAMA · QDRANT</p><h1>Ask your documents.<br><span>Understand the answers.</span></h1><p class="intro">Index a recipe PDF, ask a question, and inspect the actual passages retrieved before the local model responds.</p></section>
+    @if (error()) { <div class="alert" role="alert">{{ error() }} <button type="button" aria-label="Dismiss error" (click)="error.set(null)">×</button></div> }
+    <div class="columns">
+      <section class="panel"><div class="panel-heading"><span class="step">01</span><div><h2>Index a document</h2><p>Load the sample Thai recipes into Qdrant.</p></div></div>
+        <form (ngSubmit)="ingest()"><label for="url">PDF URL</label><input id="url" name="url" type="url" required [(ngModel)]="url" [disabled]="ingesting()" autocomplete="url"/><p class="hint">For safety, this demo accepts only the predefined public recipe PDF.</p><button class="primary" type="submit" [disabled]="ingesting() || !url.trim()">{{ ingesting() ? 'Indexing…' : 'Index document' }}</button></form>
+        @if (ingestion(); as info) { <div class="success" role="status">✓ Indexed {{ info.chunks }} chunks <small>Document ID: {{ info.documentId }}</small></div> }
+      </section>
+      <section class="panel"><div class="panel-heading"><span class="step">02</span><div><h2>Ask a question</h2><p>Get an answer grounded in retrieved text.</p></div></div>
+        <form (ngSubmit)="ask()"><label for="questionRag">Your question</label><textarea id="questionRag"
+                                                                                         name="questionRag"
+                                                                                       rows="4" maxlength="2000"
+                                                                                         required
+                                                                                         [(ngModel)]="questionRag"
+                                                                                         [disabled]="answeringRag()"
+                                                                                         placeholder="Which recipes use coconut milk?"></textarea><div class="form-bottom"><span class="hint">{{ questionRag.length }}/2000 characters</span><button class="primary" type="submit" [disabled]="answeringRag() || !questionRag.trim()">{{ answeringRag() ? 'Thinking…' : 'Generate answer' }}</button></div></form>
+      </section>
+    <section class="panel"><div class="panel-heading"><span class="step">02</span><div><h2>Ask a question</h2><p>Get an general answer.</p></div></div>
+        <form (ngSubmit)="askWithoutRag()"><label for="question">Your question</label><textarea id="question" name="question" rows="4" maxlength="2000" required [(ngModel)]="question" [disabled]="answering()" placeholder="Which recipes use coconut milk?"></textarea><div class="form-bottom"><span class="hint">{{ question.length }}/2000 characters</span><button class="primary" type="submit" [disabled]="answering() || !question.trim()">{{ answering() ? 'Thinking…' : 'Generate answer' }}</button></div></form>
+    </section>
+    </div>
+    @if (answering()) { <section class="panel result" role="status"><div class="loading"></div> Retrieving sources and generating a local answer…</section> }
+    @if (result(); as response) { <section class="panel result" aria-live="polite"><div class="result-title"><span class="step">03</span><h2>Answer</h2></div><p class="answer">{{ response.answer }}</p><div class="sources-heading"><button type="button" class="text-button" (click)="sourcesOpen.set(!sourcesOpen())" [attr.aria-expanded]="sourcesOpen()">Retrieved sources ({{ response.sources.length }}) <span>{{ sourcesOpen() ? '▾' : '▸' }}</span></button></div>
+      @if (sourcesOpen()) { <div class="sources">@for (source of response.sources; track $index) { <article class="source"><div class="source-meta"><strong>Source {{ $index + 1 }}</strong><span>Similarity {{ source.score | number:'1.2-3' }}</span></div><p>{{ source.text }}</p><small>Document: {{ source.documentId }}</small></article> } @empty { <p class="hint">No matching document chunks were found. Index the PDF first.</p> }</div> }
+    </section> }
+  </main><footer>Runs locally in Docker · Your questions are sent to your own backend and Ollama instance.</footer>
+</div>
