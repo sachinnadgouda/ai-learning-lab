@@ -25,17 +25,22 @@ public class QdrantAdapter implements VectorStorePort {
     List<Map<String,Object>> points=new ArrayList<>();
     for(int i=0;i<chunks.size();i++) {
       Chunk c=chunks.get(i);
-      points.add(Map.of("id",c.id(),"vector",vectors.get(i),"payload",Map.of("documentId",c.documentId(),"text",c.text(),"ordinal",c.ordinal())));
+      points.add(Map.of("id",c.id(),"vector",vectors.get(i),"payload",Map.of("documentId",c.documentId(),"documentName",c.documentName(),"text",c.text(),"ordinal",c.ordinal())));
     }
     client.put().uri("/collections/{name}/points?wait=true",collection).body(Map.of("points",points)).retrieve().toBodilessEntity();
   }
   @Override public List<Match> search(List<Double> vector,int limit) {
-    Map<?,?> response=client.post().uri("/collections/{name}/points/query",collection).body(Map.of("query",vector,"limit",limit,"with_payload",true)).retrieve().body(Map.class);
+    Map<?,?> response;
+    try {
+      response=client.post().uri("/collections/{name}/points/query",collection).body(Map.of("query",vector,"limit",limit,"with_payload",true)).retrieve().body(Map.class);
+    } catch(HttpClientErrorException.NotFound missingCollection) {
+      return List.of();
+    }
     if(response==null || !(response.get("result") instanceof Map<?,?> result) || !(result.get("points") instanceof List<?> points)) throw new IllegalStateException("Unexpected Qdrant search response");
     List<Match> matches=new ArrayList<>();
     for(Object p:points) {
       Map<?,?> point=(Map<?,?>)p; Map<?,?> payload=(Map<?,?>)point.get("payload");
-      matches.add(new Match((String)payload.get("documentId"),(String)payload.get("text"),((Number)point.get("score")).doubleValue()));
+      matches.add(new Match((String)payload.get("documentId"),(String)payload.get("documentName"),(String)payload.get("text"),((Number)point.get("score")).doubleValue()));
     }
     return List.copyOf(matches);
   }

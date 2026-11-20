@@ -4,12 +4,12 @@ import static org.assertj.core.api.Assertions.*;
 class TextChunkerTest {
   @Test void splitsWithOverlapAndStableIdentifiers() {
     var chunker=new TextChunker(5,2);
-    var result=chunker.split("doc","abcdefghij");
+    var result=chunker.split("doc","policy.pdf","abcdefghij");
     assertThat(result).extracting(c->c.text()).containsExactly("abcde","defgh","ghij");
-    assertThat(result.getFirst().id()).isEqualTo(chunker.split("doc","abcdefghij").getFirst().id());
+    assertThat(result.getFirst().id()).isEqualTo(chunker.split("doc","policy.pdf","abcdefghij").getFirst().id());
   }
   @Test void rejectsBlankInputAndInvalidConfiguration() {
     assertThatThrownBy(()->new TextChunker(4,4)).isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(()->new TextChunker(5,1).split("doc","  ")).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(()->new TextChunker(5,1).split("doc","policy.pdf","  ")).isInstanceOf(IllegalArgumentException.class);
   }
 }

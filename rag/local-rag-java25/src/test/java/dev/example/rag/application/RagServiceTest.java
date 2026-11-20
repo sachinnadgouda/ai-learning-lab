@@ -13,51 +13,39 @@ class RagServiceTest {
   private final GeneralAnswerPort generalAnswers=mock(GeneralAnswerPort.class);
   private final RagService service=new RagService(reader,embeddings,vectors,answers,generalAnswers,new TextChunker(20,3),5,0.5,0.6);
   @Test void ingestIndexesDocument() {
-    when(reader.readPdf("https://example.org/a.pdf")).thenReturn("A recipe for green curry");
+    when(reader.readPdfBytes(any(byte[].class))).thenReturn("Employees receive 25 days of annual leave.");
     when(embeddings.embed(anyString())).thenReturn(List.of(0.1,0.2));
-    var result=service.ingest("https://example.org/a.pdf");
+    var result=service.ingestUploadedPdf("leave.pdf", new byte[]{1});
     assertThat(result.chunks()).isPositive();
     verify(vectors).upsert(anyList(),anyList());
   }
-  @Test void questionWithNoMatchesFallsBackToGeneralAnswerWithAdvisory() {
+  @Test void questionWithNoMatchesDoesNotPresentGeneralAdviceAsPolicy() {
     when(embeddings.embed("question")).thenReturn(List.of(0.1));
     when(vectors.search(List.of(0.1),5)).thenReturn(List.of());
-    when(generalAnswers.answerWithoutRag("question")).thenReturn("General guidance");
     var result=service.ask("question");
-    assertThat(result.answer()).isEqualTo("General guidance");
-    assertThat(result.grounded()).isFalse();
-    assertThat(result.source()).isEqualTo("internet");
-    assertThat(result.advisory()).contains("manager or HR");
-    verifyNoInteractions(answers);
+    assertThat(result.answer()).isNull();
+    assertThat(result.sources()).isEmpty();
+    verifyNoInteractions(answers, generalAnswers);
   }
   @Test void questionWithMatchesPassesContextToLlm() {
-    when(embeddings.embed("coconut?")).thenReturn(List.of(0.1));
-    when(vectors.search(List.of(0.1),5)).thenReturn(List.of(new Match("doc","Curry has coconut milk",0.9)));
-    when(answers.answer(eq("coconut?"),contains("Curry has coconut milk"))).thenReturn("Green curry");
-    var result=service.ask("coconut?");
-    assertThat(result.answer()).isEqualTo("Green curry");
+    when(embeddings.embed("Annual leave?")).thenReturn(List.of(0.1));
+    when(vectors.search(List.of(0.1),5)).thenReturn(List.of(new Match("doc","leave.pdf","Annual leave is 25 days.",0.9)));
+    when(answers.answer(eq("Annual leave?"),contains("Annual leave is 25 days."))).thenReturn("25 days");
+    var result=service.ask("Annual leave?");
+    assertThat(result.answer()).isEqualTo("25 days");
     assertThat(result.sources()).hasSize(1);
-    assertThat(result.grounded()).isTrue();
-    assertThat(result.source()).isEqualTo("rag");
-    assertThat(result.advisory()).isNull();
   }
-  @Test void questionWithoutCoverageFallsBackToGeneralAnswer() {
+  @Test void questionWithoutCoverageReturnsNoMatch() {
     when(embeddings.embed("Home office instrument subsidy policy?")).thenReturn(List.of(0.2));
-    when(vectors.search(List.of(0.2),5)).thenReturn(List.of(new Match("doc","Employees may work from home two days per week.",0.84)));
-    when(generalAnswers.answerWithoutRag("Home office instrument subsidy policy?")).thenReturn("General subsidy information");
+    when(vectors.search(List.of(0.2),5)).thenReturn(List.of(new Match("doc","remote.pdf","Employees may work from home two days per week.",0.84)));
     var result=service.ask("Home office instrument subsidy policy?");
-    assertThat(result.answer()).isEqualTo("General subsidy information");
-    assertThat(result.grounded()).isFalse();
-    assertThat(result.source()).isEqualTo("internet");
-    verifyNoInteractions(answers);
+    assertThat(result.sources()).isEmpty();
+    verifyNoInteractions(answers, generalAnswers);
   }
   @Test void askWithoutRagUsesGeneralAnswerPort() {
     when(generalAnswers.answerWithoutRag("What is annual leave?")).thenReturn("General annual leave guidance");
     var result=service.askWithoutRag("What is annual leave?");
     assertThat(result.answer()).isEqualTo("General annual leave guidance");
     assertThat(result.sources()).isEmpty();
-    assertThat(result.grounded()).isFalse();
-    assertThat(result.source()).isEqualTo("internet");
-    assertThat(result.advisory()).contains("without RAG context");
   }
 }

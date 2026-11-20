@@ -3,6 +3,10 @@ server:
 spring:
   application:
     name: local-rag
+  servlet:
+    multipart:
+      max-file-size: ${rag.max-pdf-bytes}B
+      max-request-size: 11MB
 management:
   endpoints:
     web:
@@ -18,7 +22,8 @@ logging:
 rag:
   ollama-url: ${OLLAMA_URL:http://localhost:11434}
   qdrant-url: ${QDRANT_URL:http://localhost:6333}
-  collection: thai-recipe-index
+  collection: hr-policy-index
+  question-file: ${RAG_QUESTION_FILE:./data/questions.json}
   chat-model: llama3.2:1b
   embedding-model: nomic-embed-text
   top-k: 5
