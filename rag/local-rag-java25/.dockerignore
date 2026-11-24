@@ -1,6 +1,11 @@
 .git
 .idea
 .vscode
+.DS_Store
 target
 frontend
+documents
+data
+.env*
 *.zip
+*.log

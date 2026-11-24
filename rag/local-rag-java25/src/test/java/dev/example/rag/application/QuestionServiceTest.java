@@ -1,15 +1,16 @@
 package dev.example.rag.application;
 
+import dev.example.rag.application.port.UpstreamUnavailableException;
 import dev.example.rag.domain.Match;
 import dev.example.rag.domain.Question.PolicyStatus;
 import dev.example.rag.infrastructure.FileQuestionStore;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.web.client.ResourceAccessException;
 import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,14 +65,33 @@ class QuestionServiceTest {
         byte[] pdf = {1};
         when(rag.ask("Annual leave?")).thenReturn(new RagService.QueryResult(null, List.of()));
         when(rag.ingestUploadedPdf("leave.pdf", pdf)).thenReturn(new RagService.IngestResult("doc", 1));
-        when(rag.findPolicyMatches("Annual leave?")).thenThrow(new ResourceAccessException("unavailable"));
+        when(rag.findPolicyMatches("Annual leave?")).thenThrow(new UpstreamUnavailableException("unavailable", null));
 
         var miss = service.ask(browser, "Annual leave?", true);
         assertThat(service.upload("leave.pdf", pdf).recheckFailures()).isEqualTo(1);
         assertThat(service.history(browser)).containsExactly(miss);
     }
 
+    @Test
+    void questionAskedDuringUploadIsRecheckedAgainstTheNewIndex() throws IOException {
+        var service = service();
+        byte[] pdf = {1};
+        var passage = new Match("doc", "leave.pdf", "Annual leave is 25 days.", 0.9);
+        when(rag.ingestUploadedPdf("leave.pdf", pdf)).thenReturn(new RagService.IngestResult("doc", 1));
+        when(rag.findPolicyMatches("Annual leave?")).thenReturn(List.of(passage));
+        when(rag.ask("Annual leave?")).thenAnswer(invocation -> {
+            service.upload("leave.pdf", pdf);
+            return new RagService.QueryResult(null, List.of());
+        });
+
+        var question = service.ask(browser, "Annual leave?", true);
+
+        assertThat(question.policyStatus()).isEqualTo(PolicyStatus.MATCH_FOUND);
+        assertThat(service.history(browser).getFirst().sources()).containsExactly(passage);
+    }
+
     private QuestionService service() throws IOException {
-        return new QuestionService(rag, new FileQuestionStore(temp.resolve("questions.json").toString(), new JsonMapper()));
+        return new QuestionService(rag, new FileQuestionStore(temp.resolve("questions.json").toString(), new JsonMapper()),
+                Clock.systemUTC());
     }
 }

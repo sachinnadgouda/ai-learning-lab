@@ -1,7 +1,7 @@
 FROM node:22-alpine AS build
 WORKDIR /ui
-COPY package*.json ./
-RUN npm install --no-audit --no-fund --fetch-retries=3
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund --fetch-retries=3
 COPY angular.json tsconfig*.json ./
 COPY src ./src
 RUN npm run build

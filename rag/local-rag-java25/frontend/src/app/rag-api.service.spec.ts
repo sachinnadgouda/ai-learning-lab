@@ -44,6 +44,13 @@ describe('RagApiService', () => {
     expect(history.request.headers.get('X-Demo-Browser-Id')).toBe(browserId);
     history.flush([]);
   });
+  it('falls back to getRandomValues when randomUUID is unavailable (insecure context)', () => {
+    vi.stubGlobal('crypto', { getRandomValues: (bytes: Uint8Array) => bytes.fill(7) });
+    service.history().subscribe();
+    const request = http.expectOne('/api/v1/questions');
+    expect(request.request.headers.get('X-Demo-Browser-Id')).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    request.flush([]);
+  });
   it('saves an HR reply', () => {
     service.reply('question-id', 'You receive 25 days.').subscribe();
     const request = http.expectOne('/api/v1/hr/questions/question-id/reply');

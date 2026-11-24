@@ -11,7 +11,7 @@ docker compose up --build -d
 docker compose ps
 ```
 
-Open **http://localhost:8088**. The frontend is bound to the local machine. To change the port, set `WEB_PORT=8090` in `.env`.
+Open **http://localhost:8088**. The frontend is bound to the local machine. To change the port, copy `.env.example` to `.env` and set `WEB_PORT=8090`.
 
 1. In **Employee view**, leave **Search HR policy documents** checked and ask, for example, “How many days of annual leave do employees receive?” If nothing matches, the question appears in HR's **Needs review** queue instead of receiving a generic answer.
 2. Switch to **HR view** and upload a text-based policy PDF containing the answer. The portal checks open questions against the updated index and shows matching passages with their filenames. A match does **not** close the question.
@@ -25,6 +25,10 @@ Open **http://localhost:8088**. The frontend is bound to the local machine. To c
 - HR policy vectors use a fresh collection, separate from the old recipe index. Question history and HR replies are stored in the `hr_data` Docker volume; Ollama and Qdrant retain their own volumes. Employee history is associated with a browser ID stored in local storage, not an account. Clearing site data or changing browser or port loses that browser's link to its history, but does not delete HR records.
 - `docker compose down` stops the app and retains its data. `docker compose down -v` **deletes** persisted questions, vectors, and downloaded models.
 
+## Configuration
+
+Backend settings live under `rag.*` in `src/main/resources/application.yml` and are validated at startup (`RagProperties`): models, retrieval thresholds, chunking, answer length (`answer-max-tokens`), batch sizes, and HTTP timeouts. Any of them can be overridden with environment variables such as `RAG_TOP_K`. Compose activates the `docker` profile, which switches console logging to ECS JSON. Models are pinned (`nomic-embed-text:v1.5`, `llama3.2:1b`); if you change them in `application.yml`, change the `ollama pull` line in `compose.yaml` too.
+
 ## API
 
 The Angular frontend calls Spring Boot through nginx. `GET /api/v1/questions` and `POST /api/v1/questions` require a UUID in `X-Demo-Browser-Id`.
@@ -36,6 +40,8 @@ The Angular frontend calls Spring Boot through nginx. `GET /api/v1/questions` an
 | `GET /api/v1/questions` | Question history for the submitting browser ID. |
 | `GET /api/v1/hr/questions` | All submissions and their policy and resolution states. |
 | `PUT /api/v1/hr/questions/{id}/reply` | `{ "reply": "Employees receive 25 days." }`; stores the reply and marks it answered. |
+
+Errors use RFC 9457 problem details: `400` invalid input, `413` oversized upload, `502` when Ollama or Qdrant fails, `500` for unexpected errors. Framework errors such as `404`/`405`/`415` keep their own status.
 
 ## Tests
 

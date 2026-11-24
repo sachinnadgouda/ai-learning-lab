@@ -1,22 +1,33 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription, finalize } from 'rxjs';
 import { PolicyStatus, Question, RagApiService, UploadResult } from './rag-api.service';
 
 type View = 'employee' | 'hr';
 type Filter = 'review' | 'all' | 'matched' | 'answered' | 'not-checked';
 
+const MAX_PDF_BYTES = 10_000_000;
+
+export function needsReview(question: Question): boolean {
+  return !question.answeredAt && (question.policyStatus === 'NO_MATCH' || question.policyStatus === 'MATCH_FOUND');
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [FormsModule, DatePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent {
   private readonly api = inject(RagApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private refreshRequest?: Subscription;
+
   readonly view = signal<View>('employee');
   readonly filter = signal<Filter>('review');
   readonly employeeQuestions = signal<Question[]>([]);
@@ -25,7 +36,7 @@ export class AppComponent {
     if (this.view() === 'employee') return this.employeeQuestions();
     return this.hrQuestions().filter(question => {
       switch (this.filter()) {
-        case 'review': return this.needsReview(question);
+        case 'review': return needsReview(question);
         case 'matched': return question.policyStatus === 'MATCHED' || question.policyStatus === 'MATCH_FOUND';
         case 'answered': return !!question.answeredAt;
         case 'not-checked': return question.policyStatus === 'NOT_CHECKED';
@@ -47,12 +58,14 @@ export class AppComponent {
   readonly saving = signal(false);
   readonly busy = computed(() => this.answering() || this.uploading() || this.saving());
   readonly uploadResult = signal<UploadResult | null>(null);
-  question = '';
-  searchPolicy = true;
-  pdf: File | null = null;
-  readonly replies: Record<string, string> = {};
+  readonly question = signal('');
+  readonly searchPolicy = signal(true);
+  readonly pdf = signal<File | null>(null);
+  readonly replies = signal<Record<string, string | undefined>>({});
+  readonly needsReview = needsReview;
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.refreshRequest?.unsubscribe());
     this.refresh();
   }
 
@@ -67,28 +80,31 @@ export class AppComponent {
   refresh(): void {
     const view = this.view();
     const request = view === 'hr' ? this.api.allQuestions() : this.api.history();
+    // A newer refresh (e.g. after switching views) supersedes any response still in flight.
+    this.refreshRequest?.unsubscribe();
     this.loading.set(true);
-    request.subscribe({
+    this.refreshRequest = request.subscribe({
       next: questions => (view === 'hr' ? this.hrQuestions : this.employeeQuestions).set(questions),
       error: error => {
-        if (this.view() === view) {
-          this.error.set(this.errorMessage(error));
-          this.loading.set(false);
-        }
+        this.error.set(this.errorMessage(error));
+        this.loading.set(false);
       },
-      complete: () => { if (this.view() === view) this.loading.set(false); }
+      complete: () => this.loading.set(false)
     });
   }
 
   ask(): void {
-    const text = this.question.trim();
+    const text = this.question().trim();
     if (!text || this.busy() || this.loading()) return;
     this.error.set(null);
     this.notice.set(null);
     this.answering.set(true);
-    this.api.ask(text, this.searchPolicy).pipe(finalize(() => this.answering.set(false))).subscribe({
+    this.api.ask(text, this.searchPolicy()).pipe(
+      finalize(() => this.answering.set(false)),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
       next: response => {
-        this.question = '';
+        this.question.set('');
         this.employeeQuestions.update(questions => [response, ...questions]);
         this.notice.set(response.policyStatus === 'NO_MATCH'
           ? 'No matching policy was found. Your question was sent to HR for review.'
@@ -99,23 +115,26 @@ export class AppComponent {
   }
 
   selectPdf(event: Event): void {
-    if (event.target instanceof HTMLInputElement) this.pdf = event.target.files?.item(0) ?? null;
+    if (event.target instanceof HTMLInputElement) this.pdf.set(event.target.files?.item(0) ?? null);
     this.uploadResult.set(null);
   }
 
   upload(input: HTMLInputElement): void {
-    const file = this.pdf;
+    const file = this.pdf();
     if (!file || this.busy() || this.loading()) return;
     this.error.set(null);
     this.uploadResult.set(null);
-    if (file.size > 10_000_000) {
+    if (file.size > MAX_PDF_BYTES) {
       this.error.set('PDF exceeds the 10 MB upload limit.');
       return;
     }
     this.uploading.set(true);
-    this.api.upload(file).pipe(finalize(() => this.uploading.set(false))).subscribe({
+    this.api.upload(file).pipe(
+      finalize(() => this.uploading.set(false)),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
       next: response => {
-        this.pdf = null;
+        this.pdf.set(null);
         input.value = '';
         this.uploadResult.set(response);
         this.refresh();
@@ -124,24 +143,27 @@ export class AppComponent {
     });
   }
 
+  setReply(id: string, text: string): void {
+    this.replies.update(replies => ({ ...replies, [id]: text }));
+  }
+
   answer(id: string): void {
-    const reply = this.replies[id]?.trim();
+    const reply = this.replies()[id]?.trim();
     if (!reply || this.busy() || this.loading()) return;
     this.error.set(null);
     this.notice.set(null);
     this.saving.set(true);
-    this.api.reply(id, reply).pipe(finalize(() => this.saving.set(false))).subscribe({
+    this.api.reply(id, reply).pipe(
+      finalize(() => this.saving.set(false)),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
       next: response => {
-        delete this.replies[id];
+        this.replies.update(({ [id]: _sent, ...rest }) => rest);
         this.hrQuestions.update(questions => questions.map(question => question.id === id ? response : question));
         this.notice.set('HR reply saved and question marked answered.');
       },
       error: error => this.error.set(this.errorMessage(error))
     });
-  }
-
-  needsReview(question: Question): boolean {
-    return !question.answeredAt && (question.policyStatus === 'NO_MATCH' || question.policyStatus === 'MATCH_FOUND');
   }
 
   private errorMessage(error: unknown): string {

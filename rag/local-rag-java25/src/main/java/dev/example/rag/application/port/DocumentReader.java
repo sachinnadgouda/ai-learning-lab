@@ -1,4 +1,5 @@
 package dev.example.rag.application.port;
+
 public interface DocumentReader {
-  String readPdfBytes(byte[] bytes);
+    String readPdfBytes(byte[] bytes);
 }

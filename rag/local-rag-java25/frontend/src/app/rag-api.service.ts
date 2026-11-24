@@ -16,6 +16,8 @@ export interface Question {
   answeredAt: string | null;
 }
 
+const BROWSER_ID_KEY = 'hr-demo-browser-id';
+
 @Injectable({ providedIn: 'root' })
 export class RagApiService {
   private readonly http = inject(HttpClient);
@@ -34,16 +36,25 @@ export class RagApiService {
     return this.http.get<Question[]>('/api/v1/hr/questions');
   }
   reply(id: string, reply: string): Observable<Question> {
-    return this.http.put<Question>(`/api/v1/hr/questions/${id}/reply`, { reply });
+    return this.http.put<Question>(`/api/v1/hr/questions/${encodeURIComponent(id)}/reply`, { reply });
   }
 
   private browserOptions(): { headers: Record<string, string> } {
-    const key = 'hr-demo-browser-id';
-    let id = localStorage.getItem(key);
+    let id = localStorage.getItem(BROWSER_ID_KEY);
     if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(key, id);
+      id = newUuid();
+      localStorage.setItem(BROWSER_ID_KEY, id);
     }
     return { headers: { 'X-Demo-Browser-Id': id } };
   }
+}
+
+// crypto.randomUUID() exists only in secure contexts; the demo may be opened over plain HTTP on a LAN address.
+function newUuid(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }

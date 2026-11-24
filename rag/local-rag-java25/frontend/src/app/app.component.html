@@ -23,13 +23,13 @@
       <section class="panel">
         <form (ngSubmit)="ask()">
           <label for="question">Your question</label>
-          <textarea id="question" name="question" rows="3" maxlength="2000" required [(ngModel)]="question"
+          <textarea id="question" name="question" rows="3" maxlength="2000" required [ngModel]="question()" (ngModelChange)="question.set($event)"
                     [disabled]="busy()" placeholder="How many days of annual leave do employees receive?"></textarea>
-          <label class="checkbox"><input type="checkbox" name="searchPolicy" [(ngModel)]="searchPolicy" [disabled]="busy()">
+          <label class="checkbox"><input type="checkbox" name="searchPolicy" [ngModel]="searchPolicy()" (ngModelChange)="searchPolicy.set($event)" [disabled]="busy()">
             Search HR policy documents</label>
           <div class="form-bottom">
             <span class="hint">Uncheck for a general AI answer, not company policy.</span>
-            <button type="submit" class="primary" [disabled]="busy() || loading() || !question.trim()">{{ answering() ? 'Checking…' : 'Ask question' }}</button>
+            <button type="submit" class="primary" [disabled]="busy() || loading() || !question().trim()">{{ answering() ? 'Checking…' : 'Ask question' }}</button>
           </div>
         </form>
       </section>
@@ -40,7 +40,7 @@
         <form (ngSubmit)="upload(fileInput)">
           <label for="policy-pdf">Policy PDF</label>
           <input #fileInput id="policy-pdf" type="file" accept=".pdf,application/pdf" [disabled]="busy()" (change)="selectPdf($event)">
-          <button type="submit" class="primary" [disabled]="!pdf || busy() || loading()">{{ uploading() ? 'Indexing and rechecking…' : 'Upload PDF' }}</button>
+          <button type="submit" class="primary" [disabled]="!pdf() || busy() || loading()">{{ uploading() ? 'Indexing and rechecking…' : 'Upload PDF' }}</button>
         </form>
         @if (uploadResult(); as result) {
           <p class="success" role="status">Indexed {{ result.chunks }} passages. Found policy matches for {{ result.matchesFound }} open questions.</p>
@@ -98,8 +98,8 @@
             <form class="reply" (ngSubmit)="answer(item.id)">
               <label [for]="'reply-' + item.id">HR reply</label>
               <textarea [id]="'reply-' + item.id" name="reply" rows="2" maxlength="4000" required
-                        [(ngModel)]="replies[item.id]" [disabled]="busy()"></textarea>
-              <button type="submit" class="primary" [disabled]="busy() || loading() || !replies[item.id]?.trim()">Send reply and mark answered</button>
+                        [ngModel]="replies()[item.id] ?? ''" (ngModelChange)="setReply(item.id, $event)" [disabled]="busy()"></textarea>
+              <button type="submit" class="primary" [disabled]="busy() || loading() || !replies()[item.id]?.trim()">Send reply and mark answered</button>
             </form>
           }
         </article>

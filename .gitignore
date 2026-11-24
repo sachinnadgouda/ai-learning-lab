@@ -1,0 +1,37 @@
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+~$*
+
+# Java / Maven
+target/
+*.class
+hs_err_pid*
+dependency-reduced-pom.xml
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+out-tsc/
+coverage/
+.nyc_output/
+npm-debug.log*
+yarn-error.log*
+
+# Test output
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Runtime data, logs, secrets
+data/
+*.log
+*.tmp
+.env
+.env.*
+!.env.example

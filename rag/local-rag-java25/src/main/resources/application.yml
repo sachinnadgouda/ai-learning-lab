@@ -1,8 +1,11 @@
 server:
   port: 8080
+  shutdown: graceful
 spring:
   application:
     name: local-rag
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   servlet:
     multipart:
       max-file-size: ${rag.max-pdf-bytes}B
@@ -13,9 +16,6 @@ management:
       exposure:
         include: health,info
 logging:
-  structured:
-    format:
-      console: ecs
   level:
     root: INFO
     dev.example.rag: INFO
@@ -25,10 +25,17 @@ rag:
   collection: hr-policy-index
   question-file: ${RAG_QUESTION_FILE:./data/questions.json}
   chat-model: llama3.2:1b
-  embedding-model: nomic-embed-text
+  embedding-model: nomic-embed-text:v1.5
   top-k: 5
   min-relevance-score: 0.5
   min-question-coverage: 0.5
   chunk-size: 1100
   chunk-overlap: 150
   max-pdf-bytes: 10000000
+  answer-max-tokens: 256
+  temperature: 0.1
+  embedding-batch-size: 16
+  upsert-batch-size: 100
+  connect-timeout: 5s
+  ollama-read-timeout: 10m
+  qdrant-read-timeout: 30s
