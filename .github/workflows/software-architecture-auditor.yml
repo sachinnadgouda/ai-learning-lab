@@ -1,0 +1,63 @@
+name: software-architecture-auditor
+
+on:
+  push:
+    paths:
+      - "applications/software-architecture-auditor/**"
+      - ".github/workflows/software-architecture-auditor.yml"
+  pull_request:
+    paths:
+      - "applications/software-architecture-auditor/**"
+      - ".github/workflows/software-architecture-auditor.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: applications/software-architecture-auditor
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
+
+      - name: Run unit, integration, API, contract, and AI eval tests
+        run: ./gradlew --no-daemon check
+
+      - name: Build CLI and server distribution
+        run: ./gradlew --no-daemon installDist
+
+      - name: CLI smoke test against example fixtures (JSON, SARIF, Mermaid)
+        run: |
+          ./build/install/arch-auditor/bin/arch-auditor audit examples/clean-hexagonal \
+            --rules examples/rules.yaml \
+            --format json \
+            --db build/ci-smoke.db \
+            --out build/ci-clean.json
+          grep -q '"violationCount": 0' build/ci-clean.json
+
+          ./build/install/arch-auditor/bin/arch-auditor audit examples/violating-monolith \
+            --rules examples/rules.yaml \
+            --format sarif \
+            --db build/ci-smoke.db \
+            --out build/ci-monolith.sarif
+          grep -q '"version": "2.1.0"' build/ci-monolith.sarif
+          grep -q 'domain-no-infrastructure' build/ci-monolith.sarif
+
+          ./build/install/arch-auditor/bin/arch-auditor audit examples/violating-monolith \
+            --rules examples/rules.yaml \
+            --format mermaid \
+            --db build/ci-smoke.db \
+            --out build/ci-monolith.mmd
+          grep -q 'graph LR' build/ci-monolith.mmd
+          grep -q '(CYCLE)' build/ci-monolith.mmd

@@ -1,0 +1,11 @@
+.gradle/
+build/
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+.idea/
+*.iml
+out/
+.DS_Store

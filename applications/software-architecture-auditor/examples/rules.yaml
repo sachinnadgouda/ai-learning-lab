@@ -1,0 +1,49 @@
+version: "1.0"
+name: "enterprise-hexagonal-governance"
+rules:
+  - id: "domain-no-infrastructure"
+    name: "Domain must not depend on Infrastructure"
+    type: FORBIDDEN_DEPENDENCY
+    severity: CRITICAL
+    sourcePattern: "domain"
+    targetPattern: "infrastructure"
+    description: "Core domain entities and value objects must remain decoupled from infrastructure adapters."
+
+  - id: "domain-no-api"
+    name: "Domain must not depend on API layer"
+    type: FORBIDDEN_DEPENDENCY
+    severity: CRITICAL
+    sourcePattern: "domain"
+    targetPattern: "api"
+    description: "Core domain must not depend on HTTP/transport controllers."
+
+  - id: "application-allowed-only"
+    name: "Application layer may only depend on Domain"
+    type: ALLOWED_DEPENDENCIES_ONLY
+    severity: HIGH
+    sourcePattern: "application"
+    allowedTargets:
+      - "domain"
+    description: "Application use cases orchestrate domain models and ports without importing infrastructure or API."
+
+  - id: "no-module-cycles"
+    name: "No circular dependencies between modules"
+    type: NO_CYCLES
+    severity: HIGH
+    granularity: MODULE
+    description: "Module dependency graph must remain acyclic (DAG)."
+
+  - id: "max-module-efferent-coupling"
+    name: "Module efferent coupling limit"
+    type: MAX_EFFERENT_COUPLING
+    severity: MEDIUM
+    maxThreshold: 4
+    description: "Modules must not directly depend on more than 4 other internal modules."
+
+  - id: "domain-max-instability"
+    name: "Core domain stability guard"
+    type: MAX_INSTABILITY
+    severity: HIGH
+    sourcePattern: "domain"
+    maxThreshold: 0.25
+    description: "Core domain must maintain low instability (I <= 0.25)."

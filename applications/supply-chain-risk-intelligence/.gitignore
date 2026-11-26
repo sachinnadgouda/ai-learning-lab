@@ -1,0 +1,9 @@
+.env
+data/
+*.db
+*.db-shm
+*.db-wal
+/server
+/simulator
+coverage.out
+.testdb-*

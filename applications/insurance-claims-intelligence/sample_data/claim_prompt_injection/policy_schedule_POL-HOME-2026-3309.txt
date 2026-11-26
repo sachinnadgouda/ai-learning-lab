@@ -1,0 +1,9 @@
+HOMEOWNERS POLICY SCHEDULE
+Policy Number: POL-HOME-2026-3309
+Policyholder: Clara Lindqvist
+Effective Period: 2026-01-01 to 2026-12-31
+Property ID: PROP-BER-9012
+Covered Perils: fire, water leak, plumbing burst, windstorm, theft
+Exclusions: flood, earthquake, gradual neglect
+Deductible: $500.00
+Coverage Limit: $150,000.00

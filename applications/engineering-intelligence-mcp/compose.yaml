@@ -1,0 +1,57 @@
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: engineering-intelligence-mcp:local
+    stdin_open: true
+    environment:
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE:-local-stdio}
+      GITHUB_MODE: ${GITHUB_MODE:-demo}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_API_BASE_URL: ${GITHUB_API_BASE_URL:-https://api.github.com}
+      PERMISSION_MODE: ${PERMISSION_MODE:-read-only}
+      ALLOWED_REPOS: ${ALLOWED_REPOS:-acme-eng/payments-platform}
+      ALLOW_UNRESTRICTED_DEMO_REPOS: ${ALLOW_UNRESTRICTED_DEMO_REPOS:-false}
+      ACTOR_ID: ${ACTOR_ID:-docker-mcp-client}
+      CONFIRMATION_SECRET: ${CONFIRMATION_SECRET:-}
+      CONFIRMATION_TTL_SECONDS: ${CONFIRMATION_TTL_SECONDS:-300}
+      AUDIT_DB_PATH: /app/data/audit.db
+      AI_PROVIDER: ${AI_PROVIDER:-none}
+      AI_BASE_URL: ${AI_BASE_URL:-http://ollama:11434}
+      AI_MODEL: ${AI_MODEL:-llama3.2:1b}
+      AI_API_KEY: ${AI_API_KEY:-}
+      # Inside the container HEALTH_HOST binds 0.0.0.0 so Docker port-forwarding works,
+      # while the published host port below is pinned strictly to 127.0.0.1.
+      # For shared deployments, set DEPLOYMENT_MODE=shared-server and METRICS_AUTH_TOKEN (or METRICS_ENABLED=false).
+      HEALTH_HOST: ${HEALTH_HOST:-0.0.0.0}
+      HEALTH_PORT: ${HEALTH_PORT:-8081}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      METRICS_AUTH_TOKEN: ${METRICS_AUTH_TOKEN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - mcp_audit_data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:0.6.5
+    profiles:
+      - ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  mcp_audit_data:
+  ollama_models:
