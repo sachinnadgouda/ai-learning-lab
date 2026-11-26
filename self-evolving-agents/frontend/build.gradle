@@ -1,0 +1,34 @@
+plugins {
+    id 'base'
+    id 'com.github.node-gradle.node' version '7.1.0'
+}
+
+// Uses the Node.js already installed (or the one in the Docker build image); nothing is downloaded.
+node {
+    download = false
+    nodeProjectDir = file(projectDir)
+}
+
+tasks.register('ngBuild', NpmTask) {
+    group = 'build'
+    description = 'Builds the Angular production bundle into dist/'
+    dependsOn tasks.named('npmInstall')
+    args = ['run', 'build']
+    inputs.files('package.json', 'package-lock.json', 'angular.json', 'tsconfig.json', 'tsconfig.app.json')
+    inputs.dir('src')
+    inputs.dir('public')
+    outputs.dir('dist')
+}
+
+tasks.register('ngTest', NpmTask) {
+    group = 'verification'
+    description = 'Runs the Angular unit tests once'
+    dependsOn tasks.named('npmInstall')
+    args = ['run', 'test', '--', '--watch=false']
+    inputs.dir('src')
+    outputs.upToDateWhen { false }
+}
+
+tasks.named('assemble') { dependsOn 'ngBuild' }
+tasks.named('check') { dependsOn 'ngTest' }
+tasks.named('clean') { delete 'dist' }

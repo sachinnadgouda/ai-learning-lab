@@ -1,0 +1,109 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: traffic
+      POSTGRES_USER: traffic
+      POSTGRES_PASSWORD: ${DEMO_DB_PASSWORD:?Set DEMO_DB_PASSWORD in .env (see .env.example)}
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traffic -d traffic"]
+      interval: 3s
+      retries: 20
+
+  ollama:
+    image: ollama/ollama:0.12.6
+    volumes: ["ollama-data:/root/.ollama"]
+    ports: ["127.0.0.1:11434:11434"]
+
+  # One-shot model download: docker compose --profile setup run --rm ollama-pull
+  ollama-pull:
+    image: ollama/ollama:0.12.6
+    profiles: ["setup"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama", "pull", "${DEMO_AI_MODEL:-qwen2.5:3b}"]
+    depends_on: [ollama]
+
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      SPRING_DATA_REDIS_HOST: redis
+      DEMO_DB_URL: jdbc:postgresql://postgres:5432/traffic
+      DEMO_DB_USER: traffic
+      DEMO_DB_PASSWORD: ${DEMO_DB_PASSWORD:?Set DEMO_DB_PASSWORD in .env}
+      DEMO_ADMIN_TOKEN: ${DEMO_ADMIN_TOKEN:?Set DEMO_ADMIN_TOKEN in .env (>= 12 chars)}
+      DEMO_AI_ENABLED: ${DEMO_AI_ENABLED:-false}
+      DEMO_AI_OLLAMA_URL: ${DEMO_AI_OLLAMA_URL:-http://ollama:11434}
+      DEMO_AI_MODEL: ${DEMO_AI_MODEL:-qwen2.5:3b}
+      DEMO_AI_ALLOWED_MODELS: ${DEMO_AI_ALLOWED_MODELS:-qwen2.5:3b}
+      DEMO_AI_TIMEOUT: ${DEMO_AI_TIMEOUT:-90s}
+      DEMO_EVOLUTION_INTERVAL_MS: ${DEMO_EVOLUTION_INTERVAL_MS:-60000}
+      DEMO_BACKEND_CAPACITY: ${DEMO_BACKEND_CAPACITY:-50}
+      DEMO_QUEUE_TICKET_TTL_SECONDS: ${DEMO_QUEUE_TICKET_TTL_SECONDS:-10}
+      DEMO_TRIGGER_ARRIVALS: ${DEMO_TRIGGER_ARRIVALS:-120}
+      DEMO_CORS_ALLOWED_ORIGINS: ${DEMO_CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+      DEMO_RETENTION_AI: ${DEMO_RETENTION_AI:-30d}
+      DEMO_RETENTION_EVENTS: ${DEMO_RETENTION_EVENTS:-30d}
+      LOG_STRUCTURED_FORMAT: ${LOG_STRUCTURED_FORMAT:-logstash}
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      redis: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /api/v1/system/health HTTP/1.0\\r\\n\\r\\n\" >&3 && grep -q \"200\" <&3'"]
+      interval: 5s
+      retries: 30
+      start_period: 20s
+
+  frontend:
+    build: ./frontend
+    ports: ["127.0.0.1:4200:80"]
+    depends_on: [app]
+
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    depends_on: [app]
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?Set GRAFANA_PASSWORD in .env}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [prometheus]
+
+  k6:
+    image: grafana/k6:0.57.0
+    profiles: ["load"]
+    volumes: ["./load:/scripts:ro"]
+    environment:
+      BASE_URL: http://app:8080
+    command: ["run", "/scripts/flash-sale.js"]
+    depends_on:
+      app: { condition: service_healthy }
+
+volumes:
+  redis-data:
+  postgres-data:
+  ollama-data:
+  prometheus-data:
+  grafana-data:

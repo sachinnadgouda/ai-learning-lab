@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:traffic;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+demo:
+  admin-token: test-admin-token-123
+  cors:
+    allowed-origins: http://localhost:4200
+  evolution:
+    interval-ms: 3600000

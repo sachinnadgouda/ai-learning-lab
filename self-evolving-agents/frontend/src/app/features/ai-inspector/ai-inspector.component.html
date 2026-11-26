@@ -1,0 +1,132 @@
+<h1>AI Inspector</h1>
+<p class="muted">Every payload below is the exact text recorded at call time (secrets redacted before storage). Nothing is reconstructed.</p>
+<div class="layout">
+  <section class="panel" aria-label="AI invocations">
+    <div class="filters">
+      <mat-form-field appearance="outline" class="wide">
+        <mat-label>Search prompts &amp; responses</mat-label>
+        <input matInput name="q" data-testid="search" [ngModel]="q()" (ngModelChange)="q.set($event)" (keyup.enter)="applyFilters()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Decision</mat-label>
+        <mat-select [ngModel]="decision()" (ngModelChange)="decision.set($event); applyFilters()">
+          <mat-option value="">Any</mat-option>
+          <mat-option value="PROPOSE">PROPOSE</mat-option>
+          <mat-option value="NO_CHANGE">NO_CHANGE</mat-option>
+          <mat-option value="INSUFFICIENT_DATA">INSUFFICIENT_DATA</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Validation</mat-label>
+        <mat-select [ngModel]="validation()" (ngModelChange)="validation.set($event); applyFilters()">
+          <mat-option value="">Any</mat-option>
+          <mat-option value="VALID">VALID</mat-option>
+          <mat-option value="INVALID">INVALID</mat-option>
+          <mat-option value="NOT_APPLICABLE">NOT_APPLICABLE</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Call status</mat-label>
+        <mat-select [ngModel]="status()" (ngModelChange)="status.set($event); applyFilters()">
+          <mat-option value="">Any</mat-option>
+          <mat-option value="SUCCESS">SUCCESS</mat-option>
+          <mat-option value="FAILED">FAILED</mat-option>
+          <mat-option value="TIMEOUT">TIMEOUT</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Cycle ID</mat-label>
+        <input matInput name="cycle" [ngModel]="cycleId()" (ngModelChange)="cycleId.set($event)" (keyup.enter)="applyFilters()" />
+      </mat-form-field>
+    </div>
+    <div class="row">
+      <button mat-stroked-button type="button" (click)="applyFilters()">Search</button>
+      <button mat-stroked-button type="button" data-testid="compare" [disabled]="!canCompare()" (click)="runCompare()">Compare selected (2)</button>
+    </div>
+    <app-state-view [loading]="listLoading() && !list()" [error]="list() ? null : listError()" (retry)="loadList()"
+                    [empty]="!!list() && list()!.items.length === 0" emptyText="No AI invocations recorded yet.">
+      <div class="list" role="list">
+        @for (i of list()?.items; track i.id) {
+          <div class="item" role="listitem" [class.selected]="i.id === selectedId()" data-testid="invocation-item" (click)="select(i.id)">
+            <mat-checkbox [checked]="compareIds().includes(i.id)" (click)="$event.stopPropagation()"
+                          (change)="toggleCompare(i.id, $event.checked)" aria-label="Select for comparison" />
+            <div>
+              <div><span class="chip" [class]="'chip ' + decisionClass(i.decision)">{{ i.decision ?? i.status }}</span>
+                <span class="chip" [class]="'chip ' + validationClass(i.validationStatus)">{{ i.validationStatus }}</span></div>
+              <div class="meta">{{ i.createdAt | date: 'medium' }} · {{ i.durationMs }} ms</div>
+              <div class="meta mono">{{ i.model }} · {{ i.id.substring(0, 8) }}</div>
+            </div>
+          </div>
+        }
+      </div>
+      <mat-paginator [length]="list()?.totalItems ?? 0" [pageSize]="15" [pageIndex]="pageIndex()" [hidePageSize]="true" (page)="onPage($event)" />
+    </app-state-view>
+  </section>
+
+  <section aria-label="Invocation detail">
+    @if (comparison(); as c) {
+      <div class="panel" data-testid="comparison">
+        <div class="row"><h3 style="margin:0;flex:1">Comparison of {{ c.left.id.substring(0, 8) }} vs {{ c.right.id.substring(0, 8) }}</h3>
+          <button mat-button type="button" (click)="closeCompare()">Close</button></div>
+        <table class="simple">
+          <thead><tr><th>Field</th><th>Left</th><th>Right</th></tr></thead>
+          <tbody>
+            @for (d of c.differences; track d.field) {
+              <tr><td>{{ d.field }}</td><td [class.changed]="d.different" class="mono">{{ d.left }}</td><td [class.changed]="d.different" class="mono">{{ d.right }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (compareError(); as ce) { <p role="alert" style="color:var(--mat-sys-error)">{{ ce }}</p> }
+    <app-state-view [loading]="detailLoading()" [error]="detailError()" [empty]="!detail() && !detailError()"
+                    emptyText="Select an invocation to inspect its prompt and response.">
+      @if (detail(); as d) {
+        <div class="panel">
+          <div class="corr mono">
+            <span class="muted">Invocation</span><span data-testid="invocation-id">{{ d.id }} <app-copy-button [text]="d.id" label="invocation ID" /></span>
+            <span class="muted">Evolution cycle</span><span>{{ d.cycleId ?? '—' }}</span>
+            <span class="muted">Timestamp</span><span>{{ d.createdAt | date: 'yyyy-MM-dd HH:mm:ss.SSS' }}</span>
+            <span class="muted">Model</span><span>{{ d.model.name }} @if (d.model.version) { <span>({{ d.model.version.substring(0, 12) }})</span> }</span>
+            <span class="muted">Duration</span><span>{{ d.timing.durationMs }} ms @if (d.timing.promptTokens !== null) { · {{ d.timing.promptTokens }} prompt / {{ d.timing.completionTokens }} completion tokens }</span>
+            <span class="muted">Call status</span><span>{{ d.callStatus }} @if (d.error) { — {{ d.error }} }</span>
+            <span class="muted">Policy before</span><span>{{ d.policyVersionBefore !== null ? 'v' + d.policyVersionBefore : '—' }}</span>
+            @if (d.redacted) { <span class="muted">Redaction</span><span>Sensitive tokens were redacted before storage</span> }
+          </div>
+        </div>
+        <div class="split">
+          <div class="side sent" data-testid="prompt-side">
+            <h3>Prompt sent to AI</h3>
+            <app-json-view title="System prompt" [content]="d.prompt.system" />
+            <app-json-view title="User prompt" [content]="d.prompt.user" />
+            <app-json-view title="Metrics context" [content]="d.prompt.metricsContext" [startOpen]="false" />
+            <app-json-view title="Previous experiment context" [content]="d.prompt.historyContext" [startOpen]="false" />
+            <app-json-view title="Model configuration" [content]="d.prompt.parameters" [startOpen]="false" />
+            <app-json-view title="Exact request payload" [content]="d.prompt.requestPayload" [startOpen]="false" />
+          </div>
+          <div class="side received" data-testid="response-side">
+            <h3>AI response</h3>
+            <div class="banner ai">AI recommendation — advisory only. It cannot change the active policy.</div>
+            <app-json-view title="Raw model response" [content]="d.rawResponse" />
+            <app-json-view title="Parsed JSON" [content]="parsedJson(d)" />
+            <p><strong>Decision:</strong> <span class="chip" [class]="'chip ' + decisionClass(d.aiRecommendation.decision)" data-testid="decision">{{ d.aiRecommendation.decision ?? 'none (unparsed)' }}</span></p>
+            @if (d.aiRecommendation.decision === 'PROPOSE') {
+              <p><strong>Proposed policy:</strong> {{ d.aiRecommendation.admissionPerSecond }} admissions/s, queue {{ d.aiRecommendation.maxQueue }}</p>
+            }
+            <p><strong>Rationale:</strong> {{ d.aiRecommendation.rationale ?? '—' }}</p>
+          </div>
+        </div>
+        <div class="side validated" data-testid="validation-side">
+          <h3>Independent validation (performed by the application, not the AI)</h3>
+          <div class="banner val">Validation: <span class="chip" [class]="'chip ' + validationClass(d.independentValidation.status)">{{ d.independentValidation.status }}</span>
+            Outcome: <strong>{{ d.independentValidation.outcome ?? 'pending' }}</strong>
+            @if (d.independentValidation.candidateVersion !== null) { · candidate v{{ d.independentValidation.candidateVersion }} }</div>
+          @if (validationErrors().length > 0) {
+            <ul class="errors" data-testid="validation-errors">@for (e of validationErrors(); track e) { <li>{{ e }}</li> }</ul>
+          }
+          <app-json-view title="Evaluation (simulated replay, not measured)" [content]="evaluationJson(d)" [startOpen]="false" />
+        </div>
+      }
+    </app-state-view>
+  </section>
+</div>
