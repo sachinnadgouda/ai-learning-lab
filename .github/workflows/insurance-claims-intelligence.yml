@@ -1,0 +1,43 @@
+name: insurance-claims-intelligence
+
+on:
+  push:
+    paths:
+      - "applications/insurance-claims-intelligence/**"
+      - ".github/workflows/insurance-claims-intelligence.yml"
+  pull_request:
+    paths:
+      - "applications/insurance-claims-intelligence/**"
+      - ".github/workflows/insurance-claims-intelligence.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: applications/insurance-claims-intelligence
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --python 3.13 --all-extras
+
+      - name: Lint (Ruff)
+        run: uv run ruff check .
+
+      - name: Type check (Mypy)
+        run: uv run mypy src
+
+      - name: Unit, integration, contract, and eval tests (Pytest)
+        run: uv run pytest -v
+
+      - name: Offline AI Evaluation Gate
+        run: uv run python -m claims_intel.evals.runner

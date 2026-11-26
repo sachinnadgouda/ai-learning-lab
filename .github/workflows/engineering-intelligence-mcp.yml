@@ -1,0 +1,54 @@
+name: engineering-intelligence-mcp
+
+on:
+  push:
+    paths:
+      - "applications/engineering-intelligence-mcp/**"
+      - ".github/workflows/engineering-intelligence-mcp.yml"
+  pull_request:
+    paths:
+      - "applications/engineering-intelligence-mcp/**"
+      - ".github/workflows/engineering-intelligence-mcp.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: applications/engineering-intelligence-mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: applications/engineering-intelligence-mcp/package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+      - name: Run unit, contract, integration, and eval tests
+        run: npm test
+      - name: Run offline AI & prompt-injection evaluation suite
+        run: npm run eval
+      - name: Smoke-test stdio MCP client-server demo
+        run: npm run cli -- demo
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        working-directory: applications/engineering-intelligence-mcp
+        run: docker compose -f compose.yaml config -q
+      - name: Build Docker image
+        working-directory: applications/engineering-intelligence-mcp
+        run: docker build -t engineering-intelligence-mcp:ci .

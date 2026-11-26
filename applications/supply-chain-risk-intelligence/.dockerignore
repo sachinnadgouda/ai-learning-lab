@@ -1,0 +1,10 @@
+.git
+.env
+data/
+*.db
+*.db-shm
+*.db-wal
+docs/
+README.md
+coverage.out
+.testdb-*

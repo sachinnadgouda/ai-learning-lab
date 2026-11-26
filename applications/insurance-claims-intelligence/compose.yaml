@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:17.2-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-claims_intel}
+      POSTGRES_USER: ${POSTGRES_USER:-claims}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-claims_local_dev_pw}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - claims_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-claims} -d ${POSTGRES_DB:-claims_intel}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  claims-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      HOST: 0.0.0.0
+      PORT: 8080
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-claims}:${POSTGRES_PASSWORD:-claims_local_dev_pw}@postgres:5432/${POSTGRES_DB:-claims_intel}
+      AUTO_MIGRATE: "true"
+      AI_PROVIDER: ${AI_PROVIDER:-local}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3.2:3b}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text:v1.5}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ADJUSTER_API_KEY: ${ADJUSTER_API_KEY:-dev-adjuster-key-change-me}
+      REVIEWER_API_KEY: ${REVIEWER_API_KEY:-dev-reviewer-key-change-me}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key-change-me}
+      AI_SERVICE_API_KEY: ${AI_SERVICE_API_KEY:-dev-ai-service-key-change-me}
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/ready', timeout=3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  ollama:
+    image: ollama/ollama:0.5.7
+    profiles: ["ollama"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - claims_ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  claims_pg_data:
+  claims_ollama_data:

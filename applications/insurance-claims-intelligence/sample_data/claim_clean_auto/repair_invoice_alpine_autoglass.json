@@ -1,0 +1,23 @@
+{
+  "invoice_number": "INV-2026-4410",
+  "vendor": "Alpine AutoGlass & Body GmbH",
+  "policy_number": "POL-AUTO-2026-1001",
+  "claimant_name": "Elena Vance",
+  "incident_date": "2026-05-14",
+  "vin": "1HGCM82633A004352",
+  "line_items": [
+    {
+      "description": "OEM acoustic windshield replacement",
+      "amount_usd": 1450.0
+    },
+    {
+      "description": "Paintless hail dent repair (hood & fender)",
+      "amount_usd": 1400.0
+    },
+    {
+      "description": "ADAS camera recalibration",
+      "amount_usd": 400.0
+    }
+  ],
+  "invoice_total": 3250.0
+}

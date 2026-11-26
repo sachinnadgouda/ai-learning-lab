@@ -1,0 +1,15 @@
+<configuration>
+    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <encoder>
+            <pattern>{"ts":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}","level":"%level","logger":"%logger{24}","msg":"%replace(%msg){'"','\\"'}"}%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="org.flywaydb" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
+
+    <root level="${AUDITOR_LOG_LEVEL:-INFO}">
+        <appender-ref ref="STDERR"/>
+    </root>
+</configuration>

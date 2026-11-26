@@ -1,0 +1,9 @@
+AUTO INSURANCE POLICY SCHEDULE
+Policy Number: POL-AUTO-2026-7742
+Policyholder: Marcus Thorne
+Effective Period: 2026-02-01 to 2027-02-01
+VIN: 5YJ3E1EA7KF317920
+Covered Perils: collision, theft, fire, comprehensive
+Exclusions: driving under influence, commercial hauling
+Deductible: $1,000.00
+Coverage Limit: $40,000.00

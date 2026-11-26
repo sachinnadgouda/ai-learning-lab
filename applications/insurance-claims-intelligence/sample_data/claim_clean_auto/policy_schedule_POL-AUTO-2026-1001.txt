@@ -1,0 +1,9 @@
+AUTO INSURANCE POLICY SCHEDULE
+Policy Number: POL-AUTO-2026-1001
+Policyholder: Elena Vance
+Effective Period: 2026-01-01 to 2026-12-31
+VIN: 1HGCM82633A004352
+Covered Perils: collision, comprehensive, hail, windshield, fire, theft
+Exclusions: racing, intentional damage, commercial ride-share
+Deductible: $500.00
+Coverage Limit: $50,000.00
