@@ -1,0 +1,27 @@
+.gradle/
+build/
+.idea/
+*.iml
+.env
+*.log
+.DS_Store
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Generated output
+results/
+load/results/
+build/
+out/
+bin/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+frontend/dist/
+frontend/.angular/
+coverage/
+test-results/
+playwright-report/
+*.tmp
+.env.*
+!.env.example

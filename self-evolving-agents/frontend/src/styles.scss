@@ -1,0 +1,30 @@
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light dark;
+  @include mat.theme((
+    color: mat.$azure-palette,
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; background: var(--mat-sys-surface); color: var(--mat-sys-on-surface); }
+h1 { font-weight: 500; margin: 0 0 16px; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+.tile { padding: 16px; border-radius: 12px; background: var(--mat-sys-surface-container); }
+.tile .label { font-size: 12px; opacity: .7; text-transform: uppercase; letter-spacing: .04em; }
+.tile .value { font-size: 26px; font-weight: 500; margin-top: 4px; }
+.tile .sub { font-size: 12px; opacity: .7; }
+.panel { padding: 16px; border-radius: 12px; background: var(--mat-sys-surface-container-low); margin-bottom: 16px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.chip { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; background: var(--mat-sys-surface-container-high); }
+.chip.ok { background: #c8e6c9; color: #1b5e20; } .chip.bad { background: #ffcdd2; color: #b71c1c; }
+.chip.warn { background: #ffe0b2; color: #e65100; } .chip.info { background: #bbdefb; color: #0d47a1; }
+.chip.sim { background: #e1bee7; color: #4a148c; } .chip.measured { background: #b2dfdb; color: #004d40; }
+.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.muted { opacity: .7; }
+table.simple { width: 100%; border-collapse: collapse; }
+table.simple th, table.simple td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--mat-sys-outline-variant); }
+table.simple td.changed { font-weight: 600; background: rgba(255, 193, 7, .18); }

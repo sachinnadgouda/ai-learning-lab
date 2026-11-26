@@ -1,0 +1,2 @@
+rootProject.name = 'self-evolving-traffic-demo'
+include 'frontend'

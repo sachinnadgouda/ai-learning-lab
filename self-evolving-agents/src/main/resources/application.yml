@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: evolving-traffic-demo
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: 6379
+  datasource:
+    url: ${DEMO_DB_URL:jdbc:postgresql://localhost:5432/traffic}
+    username: ${DEMO_DB_USER:traffic}
+    password: ${DEMO_DB_PASSWORD:}
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: evolving-traffic-demo
+server:
+  port: 8080
+  error:
+    include-stacktrace: never
+    include-message: never
+logging:
+  pattern:
+    level: "%5p [%X{traceId:-},%X{requestId:-},%X{evolutionCycleId:-},%X{aiInvocationId:-},%X{policyVersion:-}]"
+  structured:
+    format:
+      console: ${LOG_STRUCTURED_FORMAT:}
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+demo:
+  admin-token: ${DEMO_ADMIN_TOKEN:}
+  ai:
+    enabled: ${DEMO_AI_ENABLED:false}
+    ollama-url: ${DEMO_AI_OLLAMA_URL:http://ollama:11434}
+    model: ${DEMO_AI_MODEL:qwen2.5:3b}
+    allowed-models: ${DEMO_AI_ALLOWED_MODELS:qwen2.5:3b}
+    timeout: ${DEMO_AI_TIMEOUT:90s}
+    max-retries: 1
+    temperature: 0.2
+    num-predict: 300
+  evolution:
+    interval-ms: ${DEMO_EVOLUTION_INTERVAL_MS:60000}
+    backend-capacity: ${DEMO_BACKEND_CAPACITY:50}
+    trigger-arrivals: ${DEMO_TRIGGER_ARRIVALS:120}
+  queue:
+    ticket-ttl-seconds: ${DEMO_QUEUE_TICKET_TTL_SECONDS:10}
+  cors:
+    allowed-origins: ${DEMO_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:8081}
+  retention:
+    ai-invocations: ${DEMO_RETENTION_AI:30d}
+    events: ${DEMO_RETENTION_EVENTS:30d}
+    purge-interval: 1h

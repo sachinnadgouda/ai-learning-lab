@@ -1,0 +1,15 @@
+build
+.gradle
+.git
+frontend/node_modules
+frontend/dist
+frontend/.angular
+results
+.env
+
+results
+load/results
+docs
+.github
+*.md
+.env.*
