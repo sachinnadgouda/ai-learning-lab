@@ -10,6 +10,53 @@ See [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md), [docs/engine
 
 ---
 
+
+## What This Lab Demonstrates
+
+This repository explores the intersection of **AI Engineering, Software Engineering and Full-Stack Development**.
+
+The goal is to go beyond isolated AI experiments and build complete, working software applications that combine modern AI capabilities with sound software engineering principles.
+
+### 1. Full-Stack Software Development
+
+- Build end-to-end applications spanning frontend, backend, APIs and data persistence.
+- Develop interactive user experiences using React, TypeScript and modern web technologies.
+- Design modular backend services using Java, Kotlin, Go and Python.
+- Apply clean architecture, domain-driven design and maintainable coding practices.
+
+### 2. Applied AI Engineering
+
+- Integrate Large Language Models (LLMs) into practical business workflows.
+- Build Retrieval-Augmented Generation (RAG) pipelines using embeddings, semantic search and vector retrieval.
+- Develop agentic workflows with tool calling, orchestration and Model Context Protocol (MCP).
+- Explore frameworks and platforms such as LangChain, Spring AI and Google Gemini ADK.
+- Combine deterministic business logic with AI capabilities to build reliable applications.
+
+### 3. Production-Quality Software Engineering
+
+- Design systems with security, scalability, reliability and maintainability in mind.
+- Implement automated testing, validation and continuous integration.
+- Apply observability, structured logging and performance monitoring.
+- Build reproducible local development environments using containers and modern tooling.
+- Incorporate human-in-the-loop workflows and appropriate safeguards for AI-driven decisions.
+
+### 4. Engineering Across Languages and Technologies
+
+- Use Java, Kotlin, Go, Python and TypeScript to solve different engineering problems.
+- Explore architectural trade-offs and technology choices across different application domains.
+- Apply distributed systems concepts, asynchronous processing, API design and data modelling.
+- Evaluate how AI changes the software development lifecycle, from understanding requirements to implementation, testing and delivery.
+
+### Engineering Philosophy
+
+**AI should enhance software engineering, not replace its fundamentals.**
+
+Every project aims to demonstrate how AI capabilities can be integrated into well-engineered software: with clear architecture, predictable behaviour, meaningful tests, security boundaries and measurable outcomes.
+
+The emphasis is on building software that works, understanding the engineering decisions behind it, and continuously exploring better ways to develop and operate AI-powered applications.
+
+---
+
 ## Application Catalogue
 
 ### Existing Applications (Preserved)
